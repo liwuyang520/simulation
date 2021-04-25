@@ -3,35 +3,35 @@ library(BayesRecipe)
 library(bayeslm)
 library(MASS)
 library(caret)
-i<-1
+i<-1            #定义循环初始值，要求循环100次
 mselasso<-c()
 mserlasso<-c()
 mseBayesRLasso1<-c()
 mseBayesRLasso2<-c()
-mseBayesRLasso3<-c()
+mseBayesRLasso3<-c()    #定义mse矩阵，最终求均值
 repeat{
   #set.seed(1234)
   p = 20   #维度
   n = 50    #样本数
-  var=5
-  a<-diag(n)
-  e = rnorm(n,0,var*a)
+  var=5       #定义方差
+  a<-diag(n)       
+  e = rnorm(n,0,var*a)    #随机生成扰动项
   
-  sigma<-diag(p)#情况一
+  sigma<-diag(p)    #情况一生成x
   
   mean<-rep(0,p)
   x<- mvrnorm(n,mean,sigma)
-  b = rnorm(p)
-  Y = x %*% b + e
+  b = rnorm(p)     #随机生成系数
+  Y = x %*% b + e    #根据生成的x、系数与扰动项，生成y
   
   shuju.std <- data.frame(cbind(scale(x[,1:20]),Y))    #数字对应维度，需要时更改，此项为标准化
   names(shuju.std)[21] <- 'Y'                          #将Y于x放到同一矩阵中
   
   train <-createDataPartition(y=shuju.std$X1,p=0.70,list=FALSE)    #定义测试组与实验组
   data.train <- shuju.std[train,]
-  data.test <- shuju.std[-train,]
+  data.test <- shuju.std[-train,]      #x标准化
   y.train   = data.train$Y - mean(data.train$Y)
-  y.test <- data.test$Y - mean(data.test$Y)
+  y.test <- data.test$Y - mean(data.test$Y)     #y标准化
   x.train = scale(as.matrix(data.train[,1:20]))           
   x.test = scale(as.matrix(data.test[,1:20]))
   
@@ -63,6 +63,8 @@ repeat{
   msebb<-mean((y.pred.BayesRLasso2 - y.test)^2)
   msebc<-mean((y.pred.BayesRLasso3 - y.test)^2)
   
+  
+  #将生成的mse值放入矩阵
   mselasso<-c(mselasso,msel)
   mserlasso<-c(mserlasso,mser)
   mseBayesRLasso1<-c(mseBayesRLasso1,mseba)
@@ -74,6 +76,7 @@ repeat{
     break
   }
 }
+#求均值
 mean(mselasso)
 mean(mserlasso)
 mean(mseBayesRLasso1)
