@@ -6,9 +6,11 @@ library(caret)
 i<-1            #定义循环初始值，要求循环100次
 mselasso<-c()
 mserlasso<-c()
+msescad<-c()
+msemcp<-c()
 mseBayesRLasso1<-c()
 mseBayesRLasso2<-c()
-mseBayesRLasso3<-c()    #定义mse矩阵，最终求均值
+mseBayesRLasso3<-c() #定义mse矩阵，最终求均值
 repeat{
   #set.seed(1234)
   p = 20   #维度
@@ -25,6 +27,7 @@ repeat{
   Y = x %*% b + e    #根据生成的x、系数与扰动项，生成y
   
   shuju.std <- data.frame(cbind(scale(x[,1:20]),Y))    #数字对应维度，需要时更改，此项为标准化
+  Y<-scale(Y)
   names(shuju.std)[21] <- 'Y'                          #将Y于x放到同一矩阵中
   
   train <-createDataPartition(y=shuju.std$X1,p=0.70,list=FALSE)    #定义测试组与实验组
@@ -56,9 +59,23 @@ repeat{
   rlasso.coeff<-fit_rLASSO$beta
   y.pred.rlasso<-x.test%*%rlasso.coeff[-1]
   
+  library(ncvreg)      #SCAD方法
+  scad.cv <- cv.ncvreg(x.train,y.train,penalty="SCAD", dfmax=1000,max.iter=10^4)
+  lambda.cv.scad<- scad.cv$lambda.min
+  scad.coeff<- ncvreg(X=x.train,y=y.train, penalty='SCAD',dfmax=1000,lambda=lambda.cv.scad)$beta[-1,1]
+  y.pred.scad = x.test%*%scad.coeff
+  
+  mcp.cv <- cv.ncvreg(x.train,y.train,penalty="MCP", dfmax=1000,max.iter=10^4)    #MCP方法
+  lambda.cv.mcp<- mcp.cv$lambda.min
+  mcp.coeff<- ncvreg(X=x.train,y=y.train, penalty='MCP',dfmax=1000,lambda=lambda.cv.mcp)$beta[-1,1]
+  y.pred.mcp = x.test%*%mcp.coeff
+  
+  
   #求MSE，比较优劣
   msel<-mean((y.pred.lasso-y.test)^2)
   mser<-mean((y.pred.rlasso - y.test)^2)
+  msesc<-mean((y.pred.scad-y.test)^2)
+  msemc<-mean((y.pred.mcp-y.test)^2)
   mseba<-mean((y.pred.BayesRLasso1 - y.test)^2)
   msebb<-mean((y.pred.BayesRLasso2 - y.test)^2)
   msebc<-mean((y.pred.BayesRLasso3 - y.test)^2)
@@ -67,6 +84,8 @@ repeat{
   #将生成的mse值放入矩阵
   mselasso<-c(mselasso,msel)
   mserlasso<-c(mserlasso,mser)
+  msescad<-c(msescad,msesc)
+  msemcp<-c(msemcp,msemc)
   mseBayesRLasso1<-c(mseBayesRLasso1,mseba)
   mseBayesRLasso2<-c(mseBayesRLasso2,msebb)
   mseBayesRLasso3<-c(mseBayesRLasso3,msebc)
@@ -79,6 +98,8 @@ repeat{
 #求均值
 mean(mselasso)
 mean(mserlasso)
+mean(msescad)
+mean(msemcp)
 mean(mseBayesRLasso1)
 mean(mseBayesRLasso2)
 mean(mseBayesRLasso3)
